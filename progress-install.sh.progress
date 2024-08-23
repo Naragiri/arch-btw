@@ -1,0 +1,75 @@
+#!/bin/bash
+export ARCH_BTW_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+export ARCH_BTW_SCRIPTS=$ARCH_BTW_DIR/scripts
+source $ARCH_BTW_DIR/lib/lib.sh
+
+#  -------------------------------------------------------
+#      _             _           ____ _______        __  
+#     / \   _ __ ___| |__       | __ )_   _\ \      / /  
+#    / _ \ | '__/ __| '_ \ _____|  _ \ | |  \ \ /\ / /   
+#   / ___ \| | | (__| | | |_____| |_) || |   \ V  V /    
+#  /_/   \_\_|  \___|_| |_|     |____/ |_|    \_/\_/     
+# -------------------------------------------------------
+#        An Arch Linux install script by Naragiri.            
+# ------------------------------------------------------- 
+
+check_root
+
+set_option "INSTALL_DEVICE" "/dev/sda"
+set_option "MICROCODE" "intel"
+set_option "TIMEZONE" "America/New_York"
+set_option "LOCALE" "en_US.UTF-8"
+set_option "KEYMAP" "en"
+set_option "HOSTNAME" "volta"
+set_option "USERNAME" "nara"
+
+# set_option "TERMINAL" "alacritty"
+set_option "SHELL" "zsh"
+
+stage_zero=()   # Setup
+stage_one=()    # Partition/Format
+stage_two=()    # Bootstrap
+stage_three=()  # System Setup
+stage_four=()   # Clean Up
+
+STAGE_ZERO_SCRIPTS="$ARCH_BTW_SCRIPTS/0-stage-zero"
+STAGE_ONE_SCRIPTS="$ARCH_BTW_SCRIPTS/1-stage-one"
+STAGE_TWO_SCRIPTS="$ARCH_BTW_SCRIPTS/2-stage-two"
+STAGE_THREE_SCRIPTS="$ARCH_BTW_SCRIPTS/3-stage-three"
+STAGE_FOUR_SCRIPTS="$ARCH_BTW_SCRIPTS/4-stage-four"
+
+clear
+
+stage_zero+=("$STAGE_ZERO_SCRIPTS/synchronize-mirrors.sh")
+stage_zero+=("$STAGE_ZERO_SCRIPTS/preinstall-setup.sh")
+
+stage_one+=("$STAGE_ONE_SCRIPTS/partition-btrfs.sh")
+stage_one+=("$STAGE_ONE_SCRIPTS/format-btrfs.sh")
+
+stage_two+=("$STAGE_TWO_SCRIPTS/bootstrap-packages.sh")
+stage_two+=("$STAGE_TWO_SCRIPTS/generate-fstab.sh")
+
+stage_three+=("$STAGE_THREE_SCRIPTS/synchronize-mirrors")
+stage_three+=("$STAGE_THREE_SCRIPTS/system-config.sh")
+
+mkdir $ARCH_BTW_DIR/logs/
+run_scripts () {
+    stage_text=$1
+    shift
+
+    for script in "$@"; do
+        clear
+        show_logo
+        echo -e "$CIN $stage_text"
+        echo -e "$CIN Running: \"$script\"."
+        bash $script |& tee $ARCH_BTW_DIR/logs/$(basename "$script").log
+        sleep 2
+    done
+}
+
+run_scripts "Stage 0 - Setup" "${stage_zero[@]}"
+run_scripts "Stage 1 - Partition/Format" "${stage_one[@]}"
+run_scripts "Stage 2 - Bootstrap" "${stage_two[@]}"
+run_scripts "Stage 3 - System Setup" "${stage_three[@]}"
+
+
